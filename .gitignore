@@ -1,0 +1,31 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+coverage/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Platform build output
+android/.gradle/
+android/local.properties
+android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# Secrets — NEVER commit these
+android/key.properties
+android/app/upload-keystore.jks
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+lib/firebase_options.dart.real
+firebase/functions/lib/
+firebase/functions/node_modules/
+.env

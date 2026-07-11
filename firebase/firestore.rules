@@ -1,0 +1,81 @@
+rules_version = '2';
+
+// PetMonitor Firestore rules.
+//
+// Trust model: both the owner's iPhone and the monitor phone sign in with
+// the SAME owner account, so every document is scoped to that uid. The
+// server stores only ciphertext for anything sensitive (sealedAuth,
+// signaling envelopes) — these rules enforce access control, while
+// confidentiality is enforced by client-side end-to-end encryption.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwnerOf(data) {
+      return signedIn() && request.auth.uid == data.ownerUid;
+    }
+
+    // -----------------------------------------------------------------
+    // Owner profile (push tokens for notifications; never secrets)
+    // -----------------------------------------------------------------
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // -----------------------------------------------------------------
+    // Pairing handshake documents (short-lived)
+    // -----------------------------------------------------------------
+    match /pairings/{pairingId} {
+      allow create: if isOwnerOf(request.resource.data);
+      allow read, delete: if isOwnerOf(resource.data);
+      // The claim/confirm updates must never change the owner binding.
+      allow update: if isOwnerOf(resource.data)
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.ownerPub == resource.data.ownerPub;
+    }
+
+    // -----------------------------------------------------------------
+    // Monitor devices
+    // -----------------------------------------------------------------
+    match /devices/{deviceId} {
+      allow create: if isOwnerOf(request.resource.data);
+      allow read, delete: if isOwnerOf(resource.data);
+      // Device identity is immutable after registration.
+      allow update: if isOwnerOf(resource.data)
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.publicKey == resource.data.publicKey;
+
+      function deviceOwner() {
+        return get(/databases/$(database)/documents/devices/$(deviceId))
+          .data.ownerUid;
+      }
+
+      // Call sessions: opaque ciphertext + state machine fields.
+      match /sessions/{sessionId} {
+        allow create: if signedIn()
+          && request.auth.uid == deviceOwner()
+          && request.resource.data.ownerUid == request.auth.uid;
+        allow read, update: if signedIn()
+          && request.auth.uid == deviceOwner();
+        allow delete: if signedIn() && request.auth.uid == deviceOwner();
+
+        // Encrypted signaling envelopes (append-only mailbox).
+        match /signals/{signalId} {
+          allow create, read: if signedIn()
+            && request.auth.uid == deviceOwner();
+          allow update, delete: if false; // append-only
+        }
+      }
+
+      // Notification events (battery low, reboot, offline...).
+      match /events/{eventId} {
+        allow create, read: if signedIn()
+          && request.auth.uid == deviceOwner();
+        allow update, delete: if false;
+      }
+    }
+  }
+}
