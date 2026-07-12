@@ -57,7 +57,16 @@ class _MonitorPairingScreenState extends ConsumerState<MonitorPairingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Pair with owner')),
+      appBar: AppBar(
+        title: const Text('Pair with owner'),
+        actions: [
+          IconButton(
+            tooltip: 'Sign out / switch account',
+            icon: const Icon(Icons.logout),
+            onPressed: () => ref.read(firebaseAuthProvider).signOut(),
+          ),
+        ],
+      ),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32),

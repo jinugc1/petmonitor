@@ -37,6 +37,29 @@ class _StandbyScreenState extends ConsumerState<StandbyScreen> {
       context.go('/pair');
       return;
     }
+
+    // Account-mismatch recovery: if someone signed in with a DIFFERENT
+    // account than the one this monitor was paired under, the local
+    // pairing is orphaned (rules block every write, calls can't
+    // authenticate). Detect it and reset to the pairing screen.
+    final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
+    var ownedByUs = false;
+    try {
+      final doc = await ref
+          .read(firestoreProvider)
+          .doc(FirestorePaths.device(deviceId))
+          .get();
+      ownedByUs = doc.exists && doc.data()?['ownerUid'] == uid;
+    } catch (_) {
+      // PERMISSION_DENIED == owned by another account.
+      ownedByUs = false;
+    }
+    if (!ownedByUs) {
+      await KeyStore().wipe();
+      if (mounted) context.go('/pair');
+      return;
+    }
+
     setState(() => _deviceId = deviceId);
     await ref.read(monitorServiceProvider).start(deviceId);
     await ref.read(statusReporterProvider).start(deviceId);
@@ -95,6 +118,50 @@ class _StandbyScreenState extends ConsumerState<StandbyScreen> {
     if (mounted) context.go('/pair');
   }
 
+  /// Sign out (e.g. to hand the monitor to a different owner account).
+  /// Fully resets: unpairs locally, removes the registration if this
+  /// account still owns it, then signs out of Firebase.
+  Future<void> _signOut() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Sign out of this monitor?'),
+        content: const Text(
+          'The monitor stops working and its pairing is erased. Sign in '
+          '(with any account) and pair again to reuse it.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    ref.read(monitorServiceProvider).dispose();
+    try {
+      await ref.read(statusReporterProvider).stop();
+    } catch (_) {}
+    final deviceId = _deviceId;
+    try {
+      if (deviceId != null) {
+        await ref
+            .read(firestoreProvider)
+            .doc(FirestorePaths.device(deviceId))
+            .delete();
+      }
+    } catch (_) {} // not ours anymore / offline — local wipe still applies
+    await KeyStore().wipe();
+    await ref.read(firebaseAuthProvider).signOut();
+    // Router redirect sends us to /signin automatically.
+  }
+
   @override
   Widget build(BuildContext context) {
     // Navigate to the call screen the moment a call gets past auth.
@@ -137,8 +204,8 @@ class _StandbyScreenState extends ConsumerState<StandbyScreen> {
               ],
             ),
           ),
-          // Discreet unpair control (dim, bottom corner — not reachable
-          // by accident during calls, which use a different screen).
+          // Discreet controls (dim, bottom corners — not reachable by
+          // accident during calls, which use a different screen).
           Positioned(
             right: 8,
             bottom: 8,
@@ -149,6 +216,18 @@ class _StandbyScreenState extends ConsumerState<StandbyScreen> {
                 color: Colors.white.withValues(alpha: 0.2),
               ),
               onPressed: _unpair,
+            ),
+          ),
+          Positioned(
+            left: 8,
+            bottom: 8,
+            child: IconButton(
+              tooltip: 'Sign out / switch account',
+              icon: Icon(
+                Icons.logout,
+                color: Colors.white.withValues(alpha: 0.2),
+              ),
+              onPressed: _signOut,
             ),
           ),
         ],
