@@ -10,6 +10,15 @@ import '../auth/auth_repository.dart';
 import 'owner_call_controller.dart';
 import 'owner_push_service.dart';
 
+/// Whether THIS phone holds the pairing key for a device. Without it,
+/// calls are cryptographically impossible (the key never leaves the
+/// owner device that scanned the QR) — the UI must not offer them.
+final deviceKeyPresentProvider =
+    FutureProvider.family<bool, String>((ref, deviceId) async {
+  final key = await ref.watch(keyStoreProvider).readMasterKey(deviceId);
+  return key != null;
+});
+
 /// Paired monitors for the signed-in owner (real-time).
 final devicesProvider = StreamProvider<List<MonitorDevice>>((ref) {
   final uid = ref.watch(authStateProvider).value?.uid;
@@ -109,6 +118,9 @@ class _DeviceCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final s = device.status;
     final online = device.isOnline;
+    final hasKey =
+        ref.watch(deviceKeyPresentProvider(device.id)).value ?? false;
+    final ready = online && hasKey;
     final theme = Theme.of(context);
 
     return Card(
@@ -121,12 +133,12 @@ class _DeviceCard extends ConsumerWidget {
             Row(
               children: [
                 CircleAvatar(
-                  backgroundColor: online
+                  backgroundColor: ready
                       ? Colors.green.withValues(alpha: 0.15)
                       : theme.colorScheme.surfaceContainerHighest,
                   child: Icon(
                     Icons.pets,
-                    color: online ? Colors.green : theme.disabledColor,
+                    color: ready ? Colors.green : theme.disabledColor,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -136,21 +148,27 @@ class _DeviceCard extends ConsumerWidget {
                     children: [
                       Text(device.name, style: theme.textTheme.titleMedium),
                       Text(
-                        online
-                            ? 'Online'
-                            : s.lastOnline == null
-                                ? 'Never connected'
-                                : 'Last online '
-                                    '${DateFormat.yMd().add_jm().format(s.lastOnline!)}',
+                        !hasKey
+                            ? 'Paired with another phone — re-pair to call'
+                            : ready
+                                ? 'Ready for calls'
+                                : s.lastOnline == null
+                                    ? 'Never connected'
+                                    : 'Offline — open the monitor app · last seen '
+                                        '${DateFormat.yMd().add_jm().format(s.lastOnline!)}',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: online ? Colors.green : null,
+                          color: ready
+                              ? Colors.green
+                              : hasKey
+                                  ? null
+                                  : theme.colorScheme.error,
                         ),
                       ),
                     ],
                   ),
                 ),
                 FilledButton.icon(
-                  onPressed: online
+                  onPressed: ready
                       ? () => ref
                           .read(ownerCallControllerProvider.notifier)
                           .startCall(device.id)

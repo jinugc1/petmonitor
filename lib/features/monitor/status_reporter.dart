@@ -27,7 +27,7 @@ final statusReporterProvider = Provider<StatusReporter>((ref) {
 ///    simply pauses and the owner sees the device as offline-ish until
 ///    the next FCM wake. That trade IS the low-power design.
 class StatusReporter {
-  StatusReporter(this._ref, {this.interval = const Duration(minutes: 2)});
+  StatusReporter(this._ref, {this.interval = const Duration(seconds: 60)});
 
   final Ref _ref;
   final Duration interval;

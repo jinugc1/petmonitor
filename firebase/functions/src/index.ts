@@ -96,7 +96,8 @@ export const onDeviceEventCreated = onDocumentCreated(
  * is stale, and raise a device_offline event exactly once per transition.
  */
 export const presenceSweep = onSchedule("every 5 minutes", async () => {
-  const staleBefore = Timestamp.fromMillis(Date.now() - 6 * 60 * 1000);
+  // Monitor heartbeats every 60s; 3 minutes of silence = offline.
+  const staleBefore = Timestamp.fromMillis(Date.now() - 3 * 60 * 1000);
   const snap = await db
     .collection("devices")
     .where("status.online", "==", true)

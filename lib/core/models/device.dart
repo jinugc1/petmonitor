@@ -109,10 +109,12 @@ class MonitorDevice {
     );
   }
 
-  /// Online means a fresh heartbeat within the presence window.
+  /// Online means a fresh heartbeat within the presence window. The
+  /// monitor heartbeats every 60s while its app is alive, so 150s of
+  /// silence means the app is closed / the phone is unreachable.
   bool get isOnline {
     final last = status.lastOnline;
     if (last == null || !status.online) return false;
-    return DateTime.now().difference(last) < const Duration(minutes: 3);
+    return DateTime.now().difference(last) < const Duration(seconds: 150);
   }
 }
