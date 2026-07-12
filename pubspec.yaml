@@ -45,10 +45,6 @@ dependencies:
   # Secure key storage (Android Keystore / iOS Keychain backed)
   flutter_secure_storage: ^9.2.2
 
-  # Pairing QR
-  qr_flutter: ^4.1.0
-  mobile_scanner: ^5.1.1
-
   # Device status / reliability
   battery_plus: ^6.0.2
   connectivity_plus: ^6.0.5

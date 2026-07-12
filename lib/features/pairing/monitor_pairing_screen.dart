@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/providers.dart';
 import 'owner_pairing_screen.dart' show pairingServiceProvider;
 import 'pairing_service.dart';
 
-/// Monitor: scans the owner's QR code and completes the key exchange.
+/// Monitor: enter the pairing PIN shown in the owner app to complete the
+/// key exchange and register this phone as a pet monitor.
 class MonitorPairingScreen extends ConsumerStatefulWidget {
   const MonitorPairingScreen({super.key});
 
@@ -17,24 +18,20 @@ class MonitorPairingScreen extends ConsumerStatefulWidget {
 }
 
 class _MonitorPairingScreenState extends ConsumerState<MonitorPairingScreen> {
-  final _controller = MobileScannerController(
-    detectionSpeed: DetectionSpeed.normal,
-    formats: const [BarcodeFormat.qrCode],
-  );
-  bool _processing = false;
-  String? _status;
+  final _pin = TextEditingController();
+  bool _busy = false;
+  String? _error;
 
-  Future<void> _onDetect(BarcodeCapture capture) async {
-    if (_processing) return;
-    if (capture.barcodes.isEmpty) return;
-    final raw = capture.barcodes.first.rawValue;
-    if (raw == null) return;
+  Future<void> _pair() async {
+    final pin = _pin.text.replaceAll('-', '').trim();
+    if (pin.length < 6) {
+      setState(() => _error = 'Enter the 6-character PIN.');
+      return;
+    }
     setState(() {
-      _processing = true;
-      _status = 'Verifying and exchanging keys…';
+      _busy = true;
+      _error = null;
     });
-    await _controller.stop();
-
     try {
       final auth = ref.read(firebaseAuthProvider);
       final uid = auth.currentUser?.uid;
@@ -42,59 +39,93 @@ class _MonitorPairingScreenState extends ConsumerState<MonitorPairingScreen> {
 
       final fcmToken = await ref.read(messagingProvider).getToken();
       await ref.read(pairingServiceProvider).completeMonitorPairing(
-            scannedQr: raw,
+            pin: pin,
             signedInUid: uid,
             deviceName: 'Pet Monitor',
             fcmToken: fcmToken,
           );
       if (mounted) context.go('/standby');
     } on PairingException catch (e) {
-      _fail(e.message);
+      setState(() => _error = e.message);
     } catch (_) {
-      _fail('Pairing failed. Please try again.');
+      setState(() => _error = 'Pairing failed. Please try again.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
-  }
-
-  void _fail(String message) {
-    if (!mounted) return;
-    setState(() {
-      _processing = false;
-      _status = message;
-    });
-    _controller.start();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Pair with owner')),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          MobileScanner(controller: _controller, onDetect: _onDetect),
-          if (_processing) const Center(child: CircularProgressIndicator()),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              color: Colors.black54,
-              child: Text(
-                _status ??
-                    'Scan the QR code shown in the owner app.\n'
-                        'Keys are exchanged directly between your devices.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white),
-              ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(Icons.pets, size: 56),
+                const SizedBox(height: 16),
+                Text(
+                  'On your phone (or PC / web), open PetMonitor with this '
+                  'same account and tap "Add monitor". Then type the PIN '
+                  'it shows:',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: _pin,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.characters,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    letterSpacing: 6,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9-]')),
+                    LengthLimitingTextInputFormatter(7),
+                  ],
+                  decoration: const InputDecoration(hintText: 'ABC-123'),
+                  onSubmitted: (_) => _pair(),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: _busy ? null : _pair,
+                  child: _busy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Pair this monitor'),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Keys are exchanged directly between your devices — '
+                  'the PIN never leaves them.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
