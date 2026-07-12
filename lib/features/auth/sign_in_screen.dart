@@ -19,7 +19,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _busy = false;
-  bool _registering = false;
   String? _error;
 
   Future<void> _run(Future<void> Function() action) async {
@@ -37,8 +36,6 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           'wrong-password' ||
           'user-not-found' =>
             'Incorrect email or password.',
-          'email-already-in-use' => 'That email is already registered.',
-          'weak-password' => 'Please choose a stronger password.',
           'canceled' => null,
           _ => 'Sign-in failed. Please try again.',
         },
@@ -100,28 +97,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                 FilledButton(
                   onPressed: _busy
                       ? null
-                      : () => _run(() async {
-                            if (_registering) {
-                              await repo.registerWithEmail(
-                                _email.text.trim(),
-                                _password.text,
-                              );
-                            } else {
-                              await repo.signInWithEmail(
-                                _email.text.trim(),
-                                _password.text,
-                              );
-                            }
-                          }),
-                  child: Text(_registering ? 'Create account' : 'Sign in'),
-                ),
-                TextButton(
-                  onPressed: () => setState(() => _registering = !_registering),
-                  child: Text(
-                    _registering
-                        ? 'Have an account? Sign in'
-                        : 'New here? Create an account',
-                  ),
+                      : () => _run(
+                            () => repo.signInWithEmail(
+                              _email.text.trim(),
+                              _password.text,
+                            ),
+                          ),
+                  child: const Text('Sign in'),
                 ),
                 // Native Google/Apple sign-in SDKs exist only on mobile;
                 // desktop and web clients use email/password.

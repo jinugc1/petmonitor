@@ -15,11 +15,10 @@ class AuthRepository {
 
   final FirebaseAuth _auth;
 
+  // Self-registration is intentionally not offered: accounts are created
+  // by the operator in the Firebase console (Authentication -> Users).
   Future<UserCredential> signInWithEmail(String email, String password) =>
       _auth.signInWithEmailAndPassword(email: email, password: password);
-
-  Future<UserCredential> registerWithEmail(String email, String password) =>
-      _auth.createUserWithEmailAndPassword(email: email, password: password);
 
   Future<UserCredential> signInWithGoogle() async {
     final googleUser = await GoogleSignIn().signIn();
