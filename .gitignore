@@ -1,5 +1,6 @@
 # Flutter / Dart
 .dart_tool/
+.firebase/
 .packages
 build/
 .flutter-plugins
