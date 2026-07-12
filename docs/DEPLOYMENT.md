@@ -141,6 +141,18 @@ flutter build ipa --release -t lib/main_owner.dart \
 App Store review notes: declare camera/microphone usage (pet video
 calls); no background location; push = call wake-ups.
 
+## 6b. Web owner client (Firebase Hosting)
+
+```powershell
+# Always build with the service worker disabled so users get new
+# deploys on the next page load instead of a stale cached version:
+flutter build web --release -t lib/main_owner.dart --pwa-strategy=none
+firebase deploy --only hosting     # run from the repo root
+```
+
+Live at https://petmonitor-c7799.web.app. Hosting config lives in the
+ROOT `firebase.json`; Firestore rules/functions deploy from `firebase/`.
+
 ## 7. CI/CD
 
 `.github/workflows/ci.yml` — format, analyze, tests, functions build on
