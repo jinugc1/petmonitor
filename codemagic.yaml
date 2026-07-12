@@ -1,0 +1,24 @@
+# Codemagic CI — free-tier macOS build of the unsigned iOS Owner App.
+# Used as an alternative to GitHub Actions (see .github/workflows/ios-owner.yml).
+# Setup: codemagic.io → sign up with GitHub → add this repository →
+# start the "ios-owner-unsigned" workflow. Download the .ipa artifact.
+
+workflows:
+  ios-owner-unsigned:
+    name: iOS Owner App (unsigned)
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    environment:
+      flutter: stable
+    scripts:
+      - name: Get dependencies
+        script: flutter pub get
+      - name: Build iOS without code signing
+        script: flutter build ios --release --no-codesign -t lib/main_owner.dart
+      - name: Package unsigned IPA
+        script: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry PetMonitor-Owner-unsigned.ipa Payload
+    artifacts:
+      - PetMonitor-Owner-unsigned.ipa
