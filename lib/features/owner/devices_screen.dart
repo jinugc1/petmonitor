@@ -43,6 +43,11 @@ class DevicesScreen extends ConsumerWidget {
         title: const Text('My Pet Monitors'),
         actions: [
           IconButton(
+            tooltip: 'Settings',
+            icon: const Icon(Icons.settings),
+            onPressed: () => context.push('/settings'),
+          ),
+          IconButton(
             tooltip: 'Sign out',
             icon: const Icon(Icons.logout),
             onPressed: () => ref.read(authRepositoryProvider).signOut(),
@@ -54,35 +59,43 @@ class DevicesScreen extends ConsumerWidget {
         icon: const Icon(Icons.qr_code),
         label: const Text('Add monitor'),
       ),
-      body: devices.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => const Center(child: Text('Could not load devices')),
-        data: (list) => list.isEmpty
-            ? Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.pets, size: 72),
-                    const SizedBox(height: 16),
-                    Text(
-                      'No monitors yet',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Install PetMonitor on a spare Android phone\n'
-                      'and tap "Add monitor" to pair it securely.',
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              )
-            : ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: list.length,
-                itemBuilder: (context, i) => _DeviceCard(device: list[i]),
+      body: _buildDeviceList(context, ref, devices),
+    );
+  }
+
+  Widget _buildDeviceList(
+    BuildContext context,
+    WidgetRef ref,
+    AsyncValue<List<MonitorDevice>> devices,
+  ) {
+    return devices.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => const Center(child: Text('Could not load devices')),
+      data: (list) => list.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.pets, size: 72),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No monitors yet',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Install PetMonitor on a spare Android phone\n'
+                    'and tap "Add monitor" to pair it securely.',
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-      ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: list.length,
+              itemBuilder: (context, i) => _DeviceCard(device: list[i]),
+            ),
     );
   }
 }

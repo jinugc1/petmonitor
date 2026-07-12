@@ -26,6 +26,12 @@ dependencies:
   firebase_messaging: ^15.0.4
   flutter_local_notifications: ^17.2.1
 
+  # Spark-plan mode: the owner app sends FCM wake pushes directly (HTTP v1)
+  # using a service-account key stored in the device Keychain — no Cloud
+  # Functions / Blaze plan required.
+  googleapis_auth: ^1.6.0
+  http: ^1.2.0
+
   # Sign-in providers
   google_sign_in: ^6.2.1
   sign_in_with_apple: ^6.1.1

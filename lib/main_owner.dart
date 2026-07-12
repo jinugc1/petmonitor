@@ -8,6 +8,7 @@ import 'core/providers.dart';
 import 'features/auth/sign_in_screen.dart';
 import 'features/owner/devices_screen.dart';
 import 'features/owner/owner_call_screen.dart';
+import 'features/owner/owner_settings_screen.dart';
 import 'features/pairing/owner_pairing_screen.dart';
 import 'firebase_options.dart';
 
@@ -69,6 +70,10 @@ final _routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/devices', builder: (_, __) => const DevicesScreen()),
       GoRoute(path: '/pair', builder: (_, __) => const OwnerPairingScreen()),
       GoRoute(path: '/call', builder: (_, __) => const OwnerCallScreen()),
+      GoRoute(
+        path: '/settings',
+        builder: (_, __) => const OwnerSettingsScreen(),
+      ),
     ],
   );
 });

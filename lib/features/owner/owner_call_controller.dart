@@ -130,6 +130,12 @@ class OwnerCallController extends StateNotifier<OwnerCallState> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      // Wake the dormant monitor. Spark-plan path: send the FCM push
+      // directly from this device (see FcmDirectSender). Best-effort —
+      // if it fails, a foregrounded monitor still sees the session via
+      // its Firestore listener; on Blaze the Cloud Function also sends.
+      unawaited(_sendWakePush(deviceId, sessionId));
+
       // Give the monitor 45s to wake, authenticate, and answer.
       _ringTimeout = Timer(const Duration(seconds: 45), () {
         if (state.phase == OwnerCallPhase.ringing) {
@@ -168,6 +174,30 @@ class OwnerCallController extends StateNotifier<OwnerCallState> {
         error: 'Could not start the call',
       );
       await _teardown();
+    }
+  }
+
+  Future<void> _sendWakePush(String deviceId, String sessionId) async {
+    try {
+      final sender = _ref.read(fcmDirectSenderProvider);
+      if (!await sender.isConfigured) {
+        _log.warn('wake-push key not configured — monitor must be awake');
+        return;
+      }
+      final device =
+          await _firestore.doc(FirestorePaths.device(deviceId)).get();
+      final token = device.data()?['fcmToken'] as String?;
+      if (token == null) {
+        _log.warn('monitor has no FCM token registered');
+        return;
+      }
+      await sender.sendCallWake(
+        fcmToken: token,
+        deviceId: deviceId,
+        sessionId: sessionId,
+      );
+    } catch (e) {
+      _log.error('wake push failed', e);
     }
   }
 
