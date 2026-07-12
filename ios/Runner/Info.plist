@@ -7,7 +7,16 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Petmonitor</string>
+	<string>PetMonitor</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Your camera lets your pet see your face during calls.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Your microphone lets you talk to your pet during calls.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>remote-notification</string>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
