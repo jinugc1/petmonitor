@@ -33,10 +33,7 @@ class DefaultFirebaseOptions {
           'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -56,7 +53,6 @@ class DefaultFirebaseOptions {
     projectId: 'petmonitor-c7799',
     storageBucket: 'petmonitor-c7799.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCLhIHtn7iKr3ngfTY5K3LJWourL4-AzL0',
     appId: '1:699371369286:ios:0df3fb9e6019a312db6b47',
@@ -65,5 +61,15 @@ class DefaultFirebaseOptions {
     storageBucket: 'petmonitor-c7799.firebasestorage.app',
     iosClientId: '699371369286-8c6fsa0g6fhvhhiohnilbstfkamvdnlm.apps.googleusercontent.com',
     iosBundleId: 'com.petmonitor.petmonitor',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyCyG6hUHwLmLrIYiJPaC7eRjYrjw8ya2bE',
+    appId: '1:699371369286:web:e54fed71a237ac64db6b47',
+    messagingSenderId: '699371369286',
+    projectId: 'petmonitor-c7799',
+    authDomain: 'petmonitor-c7799.firebaseapp.com',
+    storageBucket: 'petmonitor-c7799.firebasestorage.app',
+    measurementId: 'G-VMF35KYTC5',
   );
 }

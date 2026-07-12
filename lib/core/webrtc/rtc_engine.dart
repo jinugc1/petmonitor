@@ -310,7 +310,13 @@ class RtcEngine {
     }
   }
 
-  Future<void> setSpeakerphone(bool on) => Helper.setSpeakerphoneOn(on);
+  Future<void> setSpeakerphone(bool on) async {
+    try {
+      await Helper.setSpeakerphoneOn(on);
+    } catch (_) {
+      // Desktop platforms route audio via system settings — no-op there.
+    }
+  }
 
   Future<void> setVolume(double volume) async {
     // Applied to the remote (incoming) audio: 0.0 .. 1.0.

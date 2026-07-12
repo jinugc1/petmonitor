@@ -124,12 +124,17 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                         : 'New here? Create an account',
                   ),
                 ),
-                const Divider(height: 32),
-                OutlinedButton.icon(
-                  onPressed: _busy ? null : () => _run(repo.signInWithGoogle),
-                  icon: const Icon(Icons.g_mobiledata),
-                  label: const Text('Continue with Google'),
-                ),
+                // Native Google/Apple sign-in SDKs exist only on mobile;
+                // the desktop client uses email/password.
+                if (Platform.isAndroid || Platform.isIOS) ...[
+                  const Divider(height: 32),
+                  OutlinedButton.icon(
+                    onPressed:
+                        _busy ? null : () => _run(repo.signInWithGoogle),
+                    icon: const Icon(Icons.g_mobiledata),
+                    label: const Text('Continue with Google'),
+                  ),
+                ],
                 if (Platform.isIOS) ...[
                   const SizedBox(height: 8),
                   OutlinedButton.icon(

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,6 +11,9 @@ import '../../core/providers.dart';
 /// reboot...). Multiple owner phones are supported: tokens are a map of
 /// token -> lastSeen, pruned opportunistically after 60 days.
 final ownerPushInitProvider = FutureProvider<void>((ref) async {
+  // FCM has no Windows/desktop implementation; alerts there are shown by
+  // the dashboard itself (device cards go offline/red in near-real-time).
+  if (!Platform.isAndroid && !Platform.isIOS) return;
   final user = ref.watch(authStateProvider).value;
   if (user == null) return;
 
