@@ -37,7 +37,7 @@ dependencies:
   sign_in_with_apple: ^6.1.1
 
   # Media / WebRTC
-  flutter_webrtc: ^0.11.6
+  flutter_webrtc: ^1.5.2
 
   # Cryptography (X25519, AES-256-GCM, HMAC-SHA256, HKDF)
   cryptography: ^2.7.0
