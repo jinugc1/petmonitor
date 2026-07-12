@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -183,10 +185,27 @@ class _DeviceCard extends ConsumerWidget {
                 ),
                 PopupMenuButton<String>(
                   onSelected: (value) {
-                    if (value == 'remove') _remove(context, ref);
+                    switch (value) {
+                      case 'remove':
+                        _remove(context, ref);
+                      case 'share':
+                        context.push('/share/${device.id}');
+                      case 'receive':
+                        context.push('/receive');
+                    }
                   },
-                  itemBuilder: (context) => const [
-                    PopupMenuItem(
+                  itemBuilder: (context) => [
+                    if (hasKey)
+                      const PopupMenuItem(
+                        value: 'share',
+                        child: Text('Share call access…'),
+                      ),
+                    if (!hasKey && (Platform.isAndroid || Platform.isIOS))
+                      const PopupMenuItem(
+                        value: 'receive',
+                        child: Text('Scan call access…'),
+                      ),
+                    const PopupMenuItem(
                       value: 'remove',
                       child: Text('Remove monitor'),
                     ),

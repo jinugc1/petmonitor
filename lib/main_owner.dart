@@ -9,6 +9,8 @@ import 'features/auth/sign_in_screen.dart';
 import 'features/owner/devices_screen.dart';
 import 'features/owner/owner_call_screen.dart';
 import 'features/owner/owner_settings_screen.dart';
+import 'features/owner/receive_access_screen.dart';
+import 'features/owner/share_access_screen.dart';
 import 'features/pairing/owner_pairing_screen.dart';
 import 'firebase_options.dart';
 
@@ -73,6 +75,15 @@ final _routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         builder: (_, __) => const OwnerSettingsScreen(),
+      ),
+      GoRoute(
+        path: '/share/:id',
+        builder: (_, state) =>
+            ShareAccessScreen(deviceId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/receive',
+        builder: (_, __) => const ReceiveAccessScreen(),
       ),
     ],
   );
