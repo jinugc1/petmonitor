@@ -158,6 +158,17 @@ class _DeviceCard extends ConsumerWidget {
                   icon: const Icon(Icons.videocam),
                   label: const Text('Call'),
                 ),
+                PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'remove') _remove(context, ref);
+                  },
+                  itemBuilder: (context) => const [
+                    PopupMenuItem(
+                      value: 'remove',
+                      child: Text('Remove monitor'),
+                    ),
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -192,6 +203,40 @@ class _DeviceCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Removes the device registration and this phone's pairing key. The
+  /// monitor itself notices the deletion is irrelevant to it — unpair it
+  /// locally via the link-off button on its standby screen.
+  Future<void> _remove(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Remove ${device.name}?'),
+        content: const Text(
+          'The monitor disappears from your account. To use it again, '
+          'unpair it on the monitor screen and scan a new QR code.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref
+          .read(firestoreProvider)
+          .doc(FirestorePaths.device(device.id))
+          .delete();
+    } catch (_) {}
+    await ref.read(keyStoreProvider).deleteMasterKey(device.id);
   }
 
   Widget _stat(IconData icon, String label) => Row(
