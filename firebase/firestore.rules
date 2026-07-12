@@ -23,6 +23,13 @@ service cloud.firestore {
     // -----------------------------------------------------------------
     match /users/{uid} {
       allow read, write: if signedIn() && request.auth.uid == uid;
+
+      // PIN-based access grants: short-lived hand-off of a monitor key
+      // between the owner's own devices. Content is public keys and
+      // AES-GCM ciphertext only.
+      match /grants/{grantId} {
+        allow read, write: if signedIn() && request.auth.uid == uid;
+      }
     }
 
     // -----------------------------------------------------------------

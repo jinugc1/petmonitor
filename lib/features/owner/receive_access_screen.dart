@@ -1,16 +1,14 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../../core/providers.dart';
+import 'access_grant_service.dart';
 import 'devices_screen.dart' show deviceKeyPresentProvider;
 
-/// Scans a "Share call access" QR from another of the owner's devices
-/// and stores the monitor's pairing key locally, making this device able
-/// to call without a fresh pairing. Mobile only (needs a camera).
+/// Enter the PIN shown on the owner device that can already call the
+/// monitor. Works on every platform (no camera needed).
 class ReceiveAccessScreen extends ConsumerStatefulWidget {
   const ReceiveAccessScreen({super.key});
 
@@ -20,30 +18,25 @@ class ReceiveAccessScreen extends ConsumerStatefulWidget {
 }
 
 class _ReceiveAccessScreenState extends ConsumerState<ReceiveAccessScreen> {
-  final _controller = MobileScannerController(
-    detectionSpeed: DetectionSpeed.normal,
-    formats: const [BarcodeFormat.qrCode],
-  );
-  bool _processing = false;
-  String? _status;
+  final _pin = TextEditingController();
+  bool _busy = false;
+  String? _error;
 
-  Future<void> _onDetect(BarcodeCapture capture) async {
-    if (_processing || capture.barcodes.isEmpty) return;
-    final raw = capture.barcodes.first.rawValue;
-    if (raw == null) return;
-    setState(() => _processing = true);
-    await _controller.stop();
-
+  Future<void> _redeem() async {
+    final pin = _pin.text.replaceAll('-', '').trim();
+    if (pin.length < 6) {
+      setState(() => _error = 'Enter the 6-character PIN.');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
     try {
-      final json = jsonDecode(raw) as Map<String, dynamic>;
-      if (json['t'] != 'pm-access' || json['v'] != 2) {
-        throw const FormatException('not an access code');
-      }
-      final deviceId = json['did'] as String;
-      final key = base64Decode(json['key'] as String);
-      if (key.length != 32) throw const FormatException('bad key length');
-
-      await ref.read(keyStoreProvider).saveMasterKey(deviceId, key);
+      final uid = ref.read(firebaseAuthProvider).currentUser!.uid;
+      await ref
+          .read(accessGrantServiceProvider)
+          .redeemPin(ownerUid: uid, pin: pin);
       ref.invalidate(deviceKeyPresentProvider);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -51,49 +44,82 @@ class _ReceiveAccessScreenState extends ConsumerState<ReceiveAccessScreen> {
         );
         context.pop();
       }
+    } on AccessGrantException catch (e) {
+      setState(() => _error = e.message);
     } catch (_) {
-      if (mounted) {
-        setState(() {
-          _processing = false;
-          _status = 'That is not a PetMonitor access code — use '
-              '"Share call access" on the device that can call.';
-        });
-        await _controller.start();
-      }
+      setState(() => _error = 'Something went wrong. Try again.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
     }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Scan call access')),
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          MobileScanner(controller: _controller, onDetect: _onDetect),
-          if (_processing) const Center(child: CircularProgressIndicator()),
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              color: Colors.black54,
-              child: Text(
-                _status ??
-                    'Scan the access QR shown on the device that can '
-                        'already call the monitor.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white),
-              ),
+      appBar: AppBar(title: const Text('Enter access PIN')),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Icon(Icons.key, size: 56),
+                const SizedBox(height: 16),
+                Text(
+                  'On the device that can already call the monitor, open '
+                  'its menu and choose "Share call access", then type the '
+                  'PIN it shows here.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 24),
+                TextField(
+                  controller: _pin,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.characters,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    letterSpacing: 6,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'[A-Za-z0-9-]'),
+                    ),
+                    LengthLimitingTextInputFormatter(7),
+                  ],
+                  decoration: const InputDecoration(hintText: 'ABC-123'),
+                  onSubmitted: (_) => _redeem(),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    _error!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                FilledButton(
+                  onPressed: _busy ? null : _redeem,
+                  child: _busy
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('Unlock calling on this device'),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

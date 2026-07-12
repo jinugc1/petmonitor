@@ -17,10 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
-      throw UnsupportedError(
-        'DefaultFirebaseOptions have not been configured for web - '
-        'you can reconfigure this by running the FlutterFire CLI again.',
-      );
+      return web;
     }
     switch (defaultTargetPlatform) {
       case TargetPlatform.android:
@@ -59,11 +56,21 @@ class DefaultFirebaseOptions {
     messagingSenderId: '699371369286',
     projectId: 'petmonitor-c7799',
     storageBucket: 'petmonitor-c7799.firebasestorage.app',
-    iosClientId: '699371369286-8c6fsa0g6fhvhhiohnilbstfkamvdnlm.apps.googleusercontent.com',
+    iosClientId:
+        '699371369286-8c6fsa0g6fhvhhiohnilbstfkamvdnlm.apps.googleusercontent.com',
     iosBundleId: 'com.petmonitor.petmonitor',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyCyG6hUHwLmLrIYiJPaC7eRjYrjw8ya2bE',
+    appId: '1:699371369286:web:e54fed71a237ac64db6b47',
+    messagingSenderId: '699371369286',
+    projectId: 'petmonitor-c7799',
+    authDomain: 'petmonitor-c7799.firebaseapp.com',
+    storageBucket: 'petmonitor-c7799.firebasestorage.app',
+    measurementId: 'G-VMF35KYTC5',
+  );
+  static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyCyG6hUHwLmLrIYiJPaC7eRjYrjw8ya2bE',
     appId: '1:699371369286:web:e54fed71a237ac64db6b47',
     messagingSenderId: '699371369286',

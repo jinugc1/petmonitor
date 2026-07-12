@@ -1,9 +1,8 @@
-import 'dart:io';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/utils/platform_info.dart';
 import 'auth_repository.dart';
 
 /// Shared sign-in screen (owner and monitor apps use the same account).
@@ -125,17 +124,16 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   ),
                 ),
                 // Native Google/Apple sign-in SDKs exist only on mobile;
-                // the desktop client uses email/password.
-                if (Platform.isAndroid || Platform.isIOS) ...[
+                // desktop and web clients use email/password.
+                if (isMobilePlatform) ...[
                   const Divider(height: 32),
                   OutlinedButton.icon(
-                    onPressed:
-                        _busy ? null : () => _run(repo.signInWithGoogle),
+                    onPressed: _busy ? null : () => _run(repo.signInWithGoogle),
                     icon: const Icon(Icons.g_mobiledata),
                     label: const Text('Continue with Google'),
                   ),
                 ],
-                if (Platform.isIOS) ...[
+                if (isIosPlatform) ...[
                   const SizedBox(height: 8),
                   OutlinedButton.icon(
                     onPressed: _busy ? null : () => _run(repo.signInWithApple),

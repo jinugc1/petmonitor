@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -156,7 +154,7 @@ class _DeviceCard extends ConsumerWidget {
                       Text(device.name, style: theme.textTheme.titleMedium),
                       Text(
                         !hasKey
-                            ? 'Paired with another phone — re-pair to call'
+                            ? 'No call key on this device — menu → Enter access PIN'
                             : ready
                                 ? 'Ready for calls'
                                 : s.lastOnline == null
@@ -200,10 +198,10 @@ class _DeviceCard extends ConsumerWidget {
                         value: 'share',
                         child: Text('Share call access…'),
                       ),
-                    if (!hasKey && (Platform.isAndroid || Platform.isIOS))
+                    if (!hasKey)
                       const PopupMenuItem(
                         value: 'receive',
-                        child: Text('Scan call access…'),
+                        child: Text('Enter access PIN…'),
                       ),
                     const PopupMenuItem(
                       value: 'remove',

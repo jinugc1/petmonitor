@@ -123,6 +123,53 @@ class CryptoEngine {
       _hkdf(ikm: currentKey, salt: const [], info: _ratchetInfo, length: 32);
 
   // ---------------------------------------------------------------------
+  // Owner-to-owner access grants (PIN handshake)
+  // ---------------------------------------------------------------------
+
+  /// Unambiguous alphabet (no 0/O, 1/I/L) for human-typed PINs.
+  static const String _pinAlphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
+
+  /// Random human-typeable PIN, e.g. `K7XPM2` (31^6 ≈ 8.9e8 combinations).
+  static String randomPin([int length = 6]) {
+    final out = StringBuffer();
+    while (out.length < length) {
+      // Rejection sampling: no modulo bias.
+      final b = randomBytes(1)[0];
+      if (b < _pinAlphabet.length * (256 ~/ _pinAlphabet.length)) {
+        out.write(_pinAlphabet[b % _pinAlphabet.length]);
+      }
+    }
+    return out.toString();
+  }
+
+  /// Key protecting an access-grant transfer: an ephemeral X25519 secret
+  /// (defeats passive observers outright) strengthened with a PIN through
+  /// PBKDF2 (an active man-in-the-middle must additionally brute-force
+  /// the PIN against 150k-iteration PBKDF2 within the grant's 5-minute
+  /// lifetime).
+  static Future<Uint8List> deriveAccessKey({
+    required Uint8List ecdhSecret,
+    required String pin,
+    required String grantId,
+  }) async {
+    final pbkdf2 = Pbkdf2(
+      macAlgorithm: _hmacSha256,
+      iterations: 150000,
+      bits: 256,
+    );
+    final pinKey = await pbkdf2.deriveKey(
+      secretKey: SecretKey(utf8.encode(pin.trim().toUpperCase())),
+      nonce: utf8.encode('petmonitor/grant/$grantId'),
+    );
+    return _hkdf(
+      ikm: ecdhSecret,
+      salt: await pinKey.extractBytes(),
+      info: 'petmonitor/access/v1',
+      length: 32,
+    );
+  }
+
+  // ---------------------------------------------------------------------
   // AES-256-GCM
   // ---------------------------------------------------------------------
 
