@@ -1,0 +1,39 @@
+name: iOS Owner App (unsigned)
+
+# Builds the unsigned Owner App on GitHub's macOS runners so it can be
+# signed + installed from Windows with Sideloadly (free Apple ID) —
+# no Mac required. Trigger it manually from the Actions tab.
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["ios-v*"]
+
+jobs:
+  build-ipa:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build iOS (release, no codesign)
+        run: flutter build ios --release --no-codesign -t lib/main_owner.dart
+
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qry PetMonitor-Owner-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PetMonitor-Owner-unsigned-ipa
+          path: PetMonitor-Owner-unsigned.ipa
+          retention-days: 14
