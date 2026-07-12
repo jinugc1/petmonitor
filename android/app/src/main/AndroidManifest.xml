@@ -61,6 +61,13 @@
         <!-- High-priority FCM messages are handled by the
              firebase_messaging plugin's own service (registered by the
              plugin manifest merge). -->
+        <!-- Skia fallback: Impeller's GL backend crashes the shader
+             compiler in old Adreno drivers (e.g. 2014-era monitors like
+             the OnePlus One — exactly the spare phones this app targets). -->
+        <meta-data
+            android:name="io.flutter.embedding.android.EnableImpeller"
+            android:value="false" />
+
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="incoming_calls" />
