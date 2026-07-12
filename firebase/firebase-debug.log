@@ -1,0 +1,29 @@
+[debug] [2026-07-12T18:50:49.194Z] ----------------------------------------------------------------------
+[debug] [2026-07-12T18:50:49.197Z] Command:       C:\Program Files\nodejs\node.exe C:\Users\pace\AppData\Roaming\npm\node_modules\firebase-tools\lib\bin\firebase.js firestore:databases:list
+[debug] [2026-07-12T18:50:49.198Z] CLI Version:   15.23.0
+[debug] [2026-07-12T18:50:49.198Z] Platform:      win32
+[debug] [2026-07-12T18:50:49.198Z] Node Version:  v24.18.0
+[debug] [2026-07-12T18:50:49.198Z] Detected Agent: claude-code_2-1-207_agent
+[debug] [2026-07-12T18:50:49.198Z] Time:          Sun Jul 12 2026 20:50:49 GMT+0200 (Central European Summer Time)
+[debug] [2026-07-12T18:50:49.198Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2026-07-12T18:50:52.951Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2026-07-12T18:50:52.951Z] > authorizing via signed-in user (jinugc@gmail.com)
+[debug] [2026-07-12T18:50:52.951Z] [iam] checking project petmonitor-c7799 for permissions ["datastore.databases.list","firebase.projects.get"]
+[debug] [2026-07-12T18:50:53.044Z] Checked if tokens are valid: true, expires at: 1783883786878
+[debug] [2026-07-12T18:50:53.044Z] Checked if tokens are valid: true, expires at: 1783883786878
+[debug] [2026-07-12T18:50:53.045Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/petmonitor-c7799:testIamPermissions [none]
+[debug] [2026-07-12T18:50:53.045Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/petmonitor-c7799:testIamPermissions  x-goog-user-project=petmonitor-c7799
+[debug] [2026-07-12T18:50:53.045Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/petmonitor-c7799:testIamPermissions {"permissions":["datastore.databases.list","firebase.projects.get"]}
+[debug] [2026-07-12T18:50:53.986Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/petmonitor-c7799:testIamPermissions 200
+[debug] [2026-07-12T18:50:53.987Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/petmonitor-c7799:testIamPermissions {"permissions":["datastore.databases.list","firebase.projects.get"]}
+[debug] [2026-07-12T18:50:53.987Z] Checked if tokens are valid: true, expires at: 1783883786878
+[debug] [2026-07-12T18:50:53.987Z] Checked if tokens are valid: true, expires at: 1783883786878
+[debug] [2026-07-12T18:50:53.987Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/petmonitor-c7799/databases [none]
+[debug] [2026-07-12T18:50:54.796Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/petmonitor-c7799/databases 200
+[debug] [2026-07-12T18:50:54.796Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/petmonitor-c7799/databases {"databases":[{"name":"projects/petmonitor-c7799/databases/(default)","uid":"6d2caa87-076a-45c9-b878-140abc94301e","createTime":"2026-07-11T18:21:16.423397Z","updateTime":"2026-07-11T18:21:16.423397Z","locationId":"eur3","type":"FIRESTORE_NATIVE","concurrencyMode":"PESSIMISTIC","versionRetentionPeriod":"3600s","earliestVersionTime":"2026-07-12T17:50:54.529553Z","appEngineIntegrationMode":"DISABLED","keyPrefix":"e","pointInTimeRecoveryEnablement":"POINT_IN_TIME_RECOVERY_DISABLED","deleteProtectionState":"DELETE_PROTECTION_DISABLED","databaseEdition":"STANDARD","freeTier":true,"realtimeUpdatesMode":"REALTIME_UPDATES_MODE_ENABLED","etag":"IKC+1KDnzZUDMNvg4pahy5UD"}]}
+[info] ┌──────────────────────────────────────────────────┬────────────────────┬────────────────────┐
+│ Database Name                                    │ Edition            │ Type               │
+├──────────────────────────────────────────────────┼────────────────────┼────────────────────┤
+│ projects/petmonitor-c7799/databases/(default)    │ STANDARD           │ FIRESTORE_NATIVE   │
+└──────────────────────────────────────────────────┴────────────────────┴────────────────────┘

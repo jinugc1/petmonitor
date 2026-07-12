@@ -38,6 +38,7 @@ class KeySyncService {
   final FlutterSecureStorage _storage;
 
   static const String _wrapKeyKey = 'pm.sync.wrapKey';
+  static const String _wrapUidKey = 'pm.sync.uid';
 
   CollectionReference<Map<String, dynamic>> _col(String uid) =>
       firestore.collection('users/$uid/keysync');
@@ -45,6 +46,13 @@ class KeySyncService {
   /// Sync is active on this device (wrap key cached locally).
   Future<bool> get isEnabledHere async =>
       (await _storage.read(key: _wrapKeyKey)) != null;
+
+  /// Forgets the cached wrap key (call on sign-out — the key derivation
+  /// is salted per account, so it must never leak across accounts).
+  Future<void> forgetLocal() async {
+    await _storage.delete(key: _wrapKeyKey);
+    await _storage.delete(key: _wrapUidKey);
+  }
 
   /// Any backups exist in the cloud for this account.
   Future<bool> hasCloudBackups(String uid) async =>
@@ -73,6 +81,7 @@ class KeySyncService {
       ownerUid: ownerUid,
     );
     await _storage.write(key: _wrapKeyKey, value: base64Encode(wrapKey));
+    await _storage.write(key: _wrapUidKey, value: ownerUid);
 
     var count = 0;
     for (final deviceId in deviceIds) {
@@ -82,11 +91,20 @@ class KeySyncService {
   }
 
   /// Backs up one device's key if sync is enabled here (used after a
-  /// pairing or a PIN redeem). Silently does nothing otherwise.
+  /// pairing or a PIN redeem). Silently does nothing otherwise, and
+  /// refuses to use a wrap key cached under a different account.
   Future<void> backupDevice(String ownerUid, String deviceId) async {
+    if (await _storage.read(key: _wrapUidKey) != ownerUid) return;
     final wrapKey = await _localWrapKey();
     if (wrapKey == null) return;
     await _backup(ownerUid, deviceId, wrapKey);
+  }
+
+  /// Deletes one device's backup (call on unpair / remove monitor).
+  Future<void> deleteBackup(String ownerUid, String deviceId) async {
+    try {
+      await _col(ownerUid).doc(deviceId).delete();
+    } catch (_) {}
   }
 
   Future<bool> _backup(
@@ -109,9 +127,11 @@ class KeySyncService {
     return true;
   }
 
-  /// Restores every backed-up key onto THIS device using the passphrase.
-  /// Also caches the wrap key so this device keeps future backups fresh.
-  /// Returns the number of keys restored.
+  /// Restores backed-up keys onto THIS device using the passphrase.
+  /// Only keys for monitors that still exist count (stale entries from
+  /// old pairings are purged), so the reported number always reflects
+  /// monitors that genuinely became callable. Also caches the wrap key
+  /// so this device keeps future backups fresh.
   Future<int> restore({
     required String ownerUid,
     required String passphrase,
@@ -123,12 +143,29 @@ class KeySyncService {
         'Settings and enable key sync first.',
       );
     }
+
+    // Backups are keyed by deviceId; every unpair/re-pair mints a new
+    // id, so entries for vanished devices are useless — drop them.
+    final devices = await firestore
+        .collection('devices')
+        .where('ownerUid', isEqualTo: ownerUid)
+        .get();
+    final liveDeviceIds = devices.docs.map((d) => d.id).toSet();
+
     final wrapKey = await CryptoEngine.deriveSyncWrapKey(
       passphrase: passphrase,
       ownerUid: ownerUid,
     );
     var restored = 0;
+    var attempted = 0;
     for (final doc in snap.docs) {
+      if (!liveDeviceIds.contains(doc.id)) {
+        try {
+          await doc.reference.delete(); // stale — purge
+        } catch (_) {}
+        continue;
+      }
+      attempted++;
       try {
         final masterKey = await CryptoEngine.decrypt(
           key: wrapKey,
@@ -138,13 +175,22 @@ class KeySyncService {
         await keyStore.saveMasterKey(doc.id, masterKey);
         restored++;
       } catch (_) {
-        // Wrong passphrase fails GCM authentication on every entry.
+        // Wrong passphrase fails GCM authentication.
       }
+    }
+
+    if (attempted == 0) {
+      throw const KeySyncException(
+        'The backups were for old pairings and have been cleaned up. '
+        'On the device that can currently call, open Settings and tap '
+        'Enable / back up again.',
+      );
     }
     if (restored == 0) {
       throw const KeySyncException('Wrong passphrase — try again.');
     }
     await _storage.write(key: _wrapKeyKey, value: base64Encode(wrapKey));
+    await _storage.write(key: _wrapUidKey, value: ownerUid);
     return restored;
   }
 
@@ -154,7 +200,7 @@ class KeySyncService {
     for (final doc in snap.docs) {
       await doc.reference.delete();
     }
-    await _storage.delete(key: _wrapKeyKey);
+    await forgetLocal();
   }
 }
 

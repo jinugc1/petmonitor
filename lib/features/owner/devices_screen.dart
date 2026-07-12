@@ -65,7 +65,11 @@ class DevicesScreen extends ConsumerWidget {
           IconButton(
             tooltip: 'Sign out',
             icon: const Icon(Icons.logout),
-            onPressed: () => ref.read(authRepositoryProvider).signOut(),
+            onPressed: () async {
+              // The sync wrap key is account-salted; never carry it over.
+              await ref.read(keySyncServiceProvider).forgetLocal();
+              await ref.read(authRepositoryProvider).signOut();
+            },
           ),
         ],
       ),
@@ -336,6 +340,10 @@ class _DeviceCard extends ConsumerWidget {
           .delete();
     } catch (_) {}
     await ref.read(keyStoreProvider).deleteMasterKey(device.id);
+    final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
+    if (uid != null) {
+      await ref.read(keySyncServiceProvider).deleteBackup(uid, device.id);
+    }
   }
 
   Widget _stat(IconData icon, String label) => Row(
