@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../core/providers.dart';
+import '../owner/devices_screen.dart' show deviceKeyPresentProvider;
 import 'pairing_service.dart';
 
 final pairingServiceProvider = Provider<PairingService>(
@@ -43,6 +44,9 @@ class _OwnerPairingScreenState extends ConsumerState<OwnerPairingScreen> {
       }
       setState(() => _session = session);
       final deviceId = await session.pairedDeviceId;
+      // The dashboard may have checked for this device's key before we
+      // stored it — force a re-read now that pairing is complete.
+      ref.invalidate(deviceKeyPresentProvider);
       if (mounted) context.go('/devices?paired=$deviceId');
     } catch (e) {
       if (mounted) {

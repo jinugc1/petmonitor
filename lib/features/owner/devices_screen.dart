@@ -13,8 +13,13 @@ import 'owner_push_service.dart';
 /// Whether THIS phone holds the pairing key for a device. Without it,
 /// calls are cryptographically impossible (the key never leaves the
 /// owner device that scanned the QR) — the UI must not offer them.
+///
+/// autoDispose: the check may first run mid-pairing (the device doc
+/// appears before the owner has verified and stored the key), so the
+/// result must never be cached beyond the widget's lifetime. The pairing
+/// screen additionally invalidates it on completion.
 final deviceKeyPresentProvider =
-    FutureProvider.family<bool, String>((ref, deviceId) async {
+    FutureProvider.autoDispose.family<bool, String>((ref, deviceId) async {
   final key = await ref.watch(keyStoreProvider).readMasterKey(deviceId);
   return key != null;
 });
