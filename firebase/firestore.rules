@@ -30,6 +30,12 @@ service cloud.firestore {
       match /grants/{grantId} {
         allow read, write: if signedIn() && request.auth.uid == uid;
       }
+
+      // Cloud key sync: monitor keys wrapped under a passphrase-derived
+      // key (PBKDF2 client-side). Ciphertext only.
+      match /keysync/{deviceId} {
+        allow read, write: if signedIn() && request.auth.uid == uid;
+      }
     }
 
     // -----------------------------------------------------------------

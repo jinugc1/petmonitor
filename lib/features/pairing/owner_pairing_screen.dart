@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
 import '../owner/devices_screen.dart' show deviceKeyPresentProvider;
+import '../owner/key_sync_service.dart';
 import 'pairing_service.dart';
 
 final pairingServiceProvider = Provider<PairingService>(
@@ -49,6 +50,8 @@ class _OwnerPairingScreenState extends ConsumerState<OwnerPairingScreen> {
       // The dashboard may have checked for this device's key before we
       // stored it — force a re-read now that pairing is complete.
       ref.invalidate(deviceKeyPresentProvider);
+      // Keep the encrypted cloud backup fresh (no-op if sync is off).
+      await ref.read(keySyncServiceProvider).backupDevice(uid, deviceId);
       if (mounted) context.go('/devices?paired=$deviceId');
     } catch (e) {
       if (mounted) {

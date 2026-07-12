@@ -142,6 +142,26 @@ class CryptoEngine {
     return out.toString();
   }
 
+  /// Key wrapping the cloud key-sync backups: derived purely from the
+  /// owner's sync passphrase (PBKDF2, 200k rounds, salted per account).
+  /// Firestore stores only AES-GCM ciphertext under this key — the
+  /// passphrase itself never leaves the device.
+  static Future<Uint8List> deriveSyncWrapKey({
+    required String passphrase,
+    required String ownerUid,
+  }) async {
+    final pbkdf2 = Pbkdf2(
+      macAlgorithm: _hmacSha256,
+      iterations: 200000,
+      bits: 256,
+    );
+    final key = await pbkdf2.deriveKey(
+      secretKey: SecretKey(utf8.encode(passphrase.trim())),
+      nonce: utf8.encode('petmonitor/keysync/v1|$ownerUid'),
+    );
+    return Uint8List.fromList(await key.extractBytes());
+  }
+
   /// Key protecting an access-grant transfer: an ephemeral X25519 secret
   /// (defeats passive observers outright) strengthened with a PIN through
   /// PBKDF2 (an active man-in-the-middle must additionally brute-force

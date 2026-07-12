@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/providers.dart';
 import 'access_grant_service.dart';
 import 'devices_screen.dart' show deviceKeyPresentProvider;
+import 'key_sync_service.dart';
 
 /// Enter the PIN shown on the owner device that can already call the
 /// monitor. Works on every platform (no camera needed).
@@ -34,10 +35,12 @@ class _ReceiveAccessScreenState extends ConsumerState<ReceiveAccessScreen> {
     });
     try {
       final uid = ref.read(firebaseAuthProvider).currentUser!.uid;
-      await ref
+      final deviceId = await ref
           .read(accessGrantServiceProvider)
           .redeemPin(ownerUid: uid, pin: pin);
       ref.invalidate(deviceKeyPresentProvider);
+      // Keep the encrypted cloud backup fresh (no-op if sync is off).
+      await ref.read(keySyncServiceProvider).backupDevice(uid, deviceId);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('This device can now call.')),

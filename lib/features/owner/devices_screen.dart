@@ -7,6 +7,7 @@ import '../../core/firebase/firestore_paths.dart';
 import '../../core/models/device.dart';
 import '../../core/providers.dart';
 import '../auth/auth_repository.dart';
+import 'key_sync_service.dart';
 import 'owner_call_controller.dart';
 import 'owner_push_service.dart';
 
@@ -190,6 +191,8 @@ class _DeviceCard extends ConsumerWidget {
                         context.push('/share/${device.id}');
                       case 'receive':
                         context.push('/receive');
+                      case 'unlock':
+                        _unlockWithPassphrase(context, ref);
                     }
                   },
                   itemBuilder: (context) => [
@@ -198,11 +201,16 @@ class _DeviceCard extends ConsumerWidget {
                         value: 'share',
                         child: Text('Share call access…'),
                       ),
-                    if (!hasKey)
+                    if (!hasKey) ...[
+                      const PopupMenuItem(
+                        value: 'unlock',
+                        child: Text('Unlock with sync passphrase…'),
+                      ),
                       const PopupMenuItem(
                         value: 'receive',
                         child: Text('Enter access PIN…'),
                       ),
+                    ],
                     const PopupMenuItem(
                       value: 'remove',
                       child: Text('Remove monitor'),
@@ -243,6 +251,57 @@ class _DeviceCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  /// Restores keys from the encrypted cloud backup (Settings → Cloud
+  /// key sync must have been enabled on a device that could call).
+  Future<void> _unlockWithPassphrase(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final controller = TextEditingController();
+    final passphrase = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Unlock calling'),
+        content: TextField(
+          controller: controller,
+          obscureText: true,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Sync passphrase'),
+          onSubmitted: (v) => Navigator.pop(dialogContext, v),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('Unlock'),
+          ),
+        ],
+      ),
+    );
+    if (passphrase == null || passphrase.isEmpty) return;
+    final uid = ref.read(firebaseAuthProvider).currentUser?.uid;
+    if (uid == null) return;
+    try {
+      final count = await ref
+          .read(keySyncServiceProvider)
+          .restore(ownerUid: uid, passphrase: passphrase);
+      ref.invalidate(deviceKeyPresentProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unlocked $count monitor(s).')),
+        );
+      }
+    } on KeySyncException catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(e.message)));
+      }
+    }
   }
 
   /// Removes the device registration and this phone's pairing key. The
