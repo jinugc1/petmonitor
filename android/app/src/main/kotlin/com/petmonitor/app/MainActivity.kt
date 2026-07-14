@@ -57,6 +57,14 @@ class MainActivity : FlutterActivity() {
                     requestBatteryExemption()
                     result.success(null)
                 }
+                "startRinging" -> {
+                    startRinging()
+                    result.success(null)
+                }
+                "stopRinging" -> {
+                    stopRinging()
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }
@@ -113,6 +121,53 @@ class MainActivity : FlutterActivity() {
                 window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
         }
+    }
+
+    private var ringtonePlayer: android.media.MediaPlayer? = null
+
+    /** Loop the device's default ringtone on the ring stream while an
+     *  authenticated call is connecting (stopped when media flows). */
+    private fun startRinging() {
+        if (ringtonePlayer != null) return
+        try {
+            val uri = android.media.RingtoneManager.getDefaultUri(
+                android.media.RingtoneManager.TYPE_RINGTONE
+            ) ?: return
+            ringtonePlayer = android.media.MediaPlayer().apply {
+                setDataSource(this@MainActivity, uri)
+                setAudioAttributes(
+                    android.media.AudioAttributes.Builder()
+                        .setUsage(
+                            android.media.AudioAttributes
+                                .USAGE_NOTIFICATION_RINGTONE
+                        )
+                        .setContentType(
+                            android.media.AudioAttributes
+                                .CONTENT_TYPE_SONIFICATION
+                        )
+                        .build()
+                )
+                isLooping = true
+                prepare()
+                start()
+            }
+        } catch (_: Exception) {
+            stopRinging() // silent monitor is better than a crashed one
+        }
+    }
+
+    private fun stopRinging() {
+        try {
+            ringtonePlayer?.stop()
+            ringtonePlayer?.release()
+        } catch (_: Exception) {
+        }
+        ringtonePlayer = null
+    }
+
+    override fun onDestroy() {
+        stopRinging()
+        super.onDestroy()
     }
 
     /** Ask the user to exempt the app from Doze/battery optimization so

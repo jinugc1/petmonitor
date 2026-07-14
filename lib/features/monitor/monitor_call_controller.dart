@@ -139,6 +139,7 @@ class MonitorCallController extends StateNotifier<MonitorCallState> {
 
       // ---- 4. Wake the device ----------------------------------------
       await WakeChannel.acquireForCall();
+      await WakeChannel.startRinging(); // audible until media connects
       await WakelockPlus.enable();
       state = state.copyWith(phase: MonitorCallPhase.connecting);
 
@@ -189,6 +190,9 @@ class MonitorCallController extends StateNotifier<MonitorCallState> {
       )
       ..add(
         engine.connectionState.listen((s) {
+          if (s == RtcConnectionState.connected) {
+            unawaited(WakeChannel.stopRinging());
+          }
           state = state.copyWith(
             rtcState: s,
             phase: s == RtcConnectionState.connected
@@ -287,6 +291,7 @@ class MonitorCallController extends StateNotifier<MonitorCallState> {
     _sessionCrypto?.destroy(); // zeroes session keys — PFS
     _sessionCrypto = null;
 
+    await WakeChannel.stopRinging();
     await WakelockPlus.disable();
     await WakeChannel.releaseAfterCall();
     state = const MonitorCallState(); // back to standby

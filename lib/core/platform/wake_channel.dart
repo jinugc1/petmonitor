@@ -34,6 +34,12 @@ class WakeChannel {
   static Future<void> requestBatteryExemption() =>
       _invoke('requestBatteryExemption');
 
+  /// Loop the device ringtone while an authenticated call connects.
+  static Future<void> startRinging() => _invoke('startRinging');
+
+  /// Stop the ringtone (call connected, ended, or failed).
+  static Future<void> stopRinging() => _invoke('stopRinging');
+
   static Future<void> _invoke(
     String method, [
     Map<String, Object?>? args,
