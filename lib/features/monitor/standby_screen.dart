@@ -63,6 +63,11 @@ class _StandbyScreenState extends ConsumerState<StandbyScreen> {
     setState(() => _deviceId = deviceId);
     await ref.read(monitorServiceProvider).start(deviceId);
     await ref.read(statusReporterProvider).start(deviceId);
+    // Keep the process alive in standby and ask (once) to be exempted
+    // from battery optimization — without these, aggressive OEMs kill
+    // the app after a while and the monitor goes unreachable.
+    await WakeChannel.startStandbyService();
+    await WakeChannel.requestBatteryExemption();
     // Pet Mode nicety: while on the charger, keep the screen dimly on so
     // the pet isn't startled by it lighting up; on battery, sleep freely.
     final charging = await Battery().batteryState;
@@ -102,6 +107,7 @@ class _StandbyScreenState extends ConsumerState<StandbyScreen> {
     // Stop background work FIRST so the heartbeat cannot resurrect the
     // device document after we delete it.
     ref.read(monitorServiceProvider).dispose();
+    await WakeChannel.stopStandbyService();
     final deviceId = _deviceId;
     try {
       await ref.read(statusReporterProvider).stop();
@@ -145,6 +151,7 @@ class _StandbyScreenState extends ConsumerState<StandbyScreen> {
     if (confirmed != true || !mounted) return;
 
     ref.read(monitorServiceProvider).dispose();
+    await WakeChannel.stopStandbyService();
     try {
       await ref.read(statusReporterProvider).stop();
     } catch (_) {}

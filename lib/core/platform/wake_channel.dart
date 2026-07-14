@@ -22,6 +22,18 @@ class WakeChannel {
   static Future<void> setKeepScreenOnWhileCharging(bool enabled) =>
       _invoke('keepScreenOnWhileCharging', {'enabled': enabled});
 
+  /// Pin the monitor process with a foreground service while paired, so
+  /// the OS never kills standby (heartbeat + FCM stay reachable).
+  static Future<void> startStandbyService() => _invoke('startStandbyService');
+
+  /// Release the foreground service (unpair / sign-out).
+  static Future<void> stopStandbyService() => _invoke('stopStandbyService');
+
+  /// One-time system dialog asking to exempt the app from battery
+  /// optimization (no-op if already exempted).
+  static Future<void> requestBatteryExemption() =>
+      _invoke('requestBatteryExemption');
+
   static Future<void> _invoke(
     String method, [
     Map<String, Object?>? args,

@@ -15,6 +15,15 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
 
+    <!-- Standby reachability: foreground service pins the process, and
+         the battery-optimization exemption keeps its network alive under
+         Doze so heartbeats and FCM arrive on time. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission
+        android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission
+        android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+
     <!-- Recovery after reboot -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
@@ -46,6 +55,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Keeps the monitor process alive in standby (see
+             StandbyService.kt). specialUse: dedicated always-available
+             pet-monitor terminal awaiting authenticated call wake-ups. -->
+        <service
+            android:name=".StandbyService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Dedicated pet monitor standby: keeps the app reachable for authenticated incoming video calls" />
+        </service>
 
         <!-- Brings the process back after reboot so FCM registration is
              refreshed immediately (standby recovery requirement). -->

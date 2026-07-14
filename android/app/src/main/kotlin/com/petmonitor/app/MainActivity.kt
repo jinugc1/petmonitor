@@ -45,6 +45,18 @@ class MainActivity : FlutterActivity() {
                     applyChargingScreenPolicy()
                     result.success(null)
                 }
+                "startStandbyService" -> {
+                    StandbyService.start(this)
+                    result.success(null)
+                }
+                "stopStandbyService" -> {
+                    StandbyService.stop(this)
+                    result.success(null)
+                }
+                "requestBatteryExemption" -> {
+                    requestBatteryExemption()
+                    result.success(null)
+                }
                 else -> result.notImplemented()
             }
         }
@@ -100,6 +112,27 @@ class MainActivity : FlutterActivity() {
             } else {
                 window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             }
+        }
+    }
+
+    /** Ask the user to exempt the app from Doze/battery optimization so
+     *  standby heartbeats and FCM wake-ups are never throttled. Shows the
+     *  system dialog only if not already exempted. */
+    private fun requestBatteryExemption() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        val pm = getSystemService(Context.POWER_SERVICE)
+                as android.os.PowerManager
+        if (pm.isIgnoringBatteryOptimizations(packageName)) return
+        try {
+            startActivity(
+                Intent(
+                    android.provider.Settings
+                        .ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    android.net.Uri.parse("package:$packageName")
+                )
+            )
+        } catch (_: Exception) {
+            // Some OEMs hide this screen; the foreground service still helps.
         }
     }
 
