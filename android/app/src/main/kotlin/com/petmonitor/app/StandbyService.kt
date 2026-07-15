@@ -7,20 +7,29 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.net.wifi.WifiManager
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 
 /**
- * Minimal foreground service that keeps the monitor process alive in
- * standby. It does NO work itself — no wake locks, no timers — it only
- * pins the process so the Dart heartbeat keeps running and FCM wake
- * pushes always find a live app instead of a battery-killed one.
+ * Foreground service that keeps the monitor reachable in standby:
  *
- * Cost: one persistent low-priority notification. For a phone that
- * lives on a charger as a dedicated pet monitor, this is the intended
- * Android mechanism.
+ *  * pins the process (battery managers stop killing the app),
+ *  * holds a PARTIAL wake lock — on old SoCs the CPU otherwise enters
+ *    deep sleep when idle/unplugged and the Dart heartbeat freezes,
+ *    which is exactly the "monitor goes offline after a while" failure,
+ *  * holds a Wi-Fi lock so the radio stays associated.
+ *
+ * This deliberately trades idle battery for reachability: a dedicated
+ * pet monitor is expected to live on a charger. The screen still
+ * sleeps; only the CPU/network stay minimally awake. Everything is
+ * released the moment the monitor is unpaired or signed out.
  */
 class StandbyService : Service() {
+
+    private var wakeLock: PowerManager.WakeLock? = null
+    private var wifiLock: WifiManager.WifiLock? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -30,8 +39,52 @@ class StandbyService : Service() {
         startId: Int
     ): Int {
         startForeground(NOTIFICATION_ID, buildNotification())
+        acquireLocks()
         // If the OS ever reclaims us, come back automatically.
         return START_STICKY
+    }
+
+    private fun acquireLocks() {
+        if (wakeLock == null) {
+            val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
+            wakeLock = pm.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "petmonitor:standby"
+            ).apply {
+                setReferenceCounted(false)
+                acquire()
+            }
+        }
+        if (wifiLock == null) {
+            val wm = applicationContext
+                .getSystemService(Context.WIFI_SERVICE) as WifiManager
+            @Suppress("DEPRECATION")
+            wifiLock = wm.createWifiLock(
+                WifiManager.WIFI_MODE_FULL_HIGH_PERF,
+                "petmonitor:standby"
+            ).apply {
+                setReferenceCounted(false)
+                acquire()
+            }
+        }
+    }
+
+    private fun releaseLocks() {
+        try {
+            wakeLock?.release()
+        } catch (_: Exception) {
+        }
+        wakeLock = null
+        try {
+            wifiLock?.release()
+        } catch (_: Exception) {
+        }
+        wifiLock = null
+    }
+
+    override fun onDestroy() {
+        releaseLocks()
+        super.onDestroy()
     }
 
     private fun buildNotification(): Notification {
