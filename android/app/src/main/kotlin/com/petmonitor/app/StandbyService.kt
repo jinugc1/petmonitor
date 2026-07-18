@@ -40,8 +40,53 @@ class StandbyService : Service() {
     ): Int {
         startForeground(NOTIFICATION_ID, buildNotification())
         acquireLocks()
+        if (intent == null) {
+            // STICKY restart after a process death (e.g. a crash): the
+            // Flutter side is gone, so heartbeats are frozen. Bring the
+            // activity back via a full-screen intent so standby resumes
+            // without anyone touching the phone.
+            postRecoveryNotification()
+        }
         // If the OS ever reclaims us, come back automatically.
         return START_STICKY
+    }
+
+    private fun postRecoveryNotification() {
+        val manager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    RECOVERY_CHANNEL_ID,
+                    "Standby recovery",
+                    NotificationManager.IMPORTANCE_HIGH
+                )
+            )
+        }
+        val fullScreen = PendingIntent.getActivity(
+            this,
+            1,
+            Intent(this, MainActivity::class.java).addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK
+            ),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val builder = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Notification.Builder(this, RECOVERY_CHANNEL_ID)
+        } else {
+            @Suppress("DEPRECATION")
+            Notification.Builder(this).setPriority(Notification.PRIORITY_MAX)
+        }
+        manager.notify(
+            RECOVERY_NOTIFICATION_ID,
+            builder
+                .setContentTitle("PetMonitor restarting")
+                .setContentText("Recovering standby after an interruption")
+                .setSmallIcon(android.R.drawable.presence_video_online)
+                .setFullScreenIntent(fullScreen, true)
+                .setAutoCancel(true)
+                .build()
+        )
     }
 
     private fun acquireLocks() {
@@ -128,6 +173,8 @@ class StandbyService : Service() {
     companion object {
         private const val CHANNEL_ID = "standby"
         private const val NOTIFICATION_ID = 2001
+        private const val RECOVERY_CHANNEL_ID = "standby_recovery"
+        private const val RECOVERY_NOTIFICATION_ID = 2002
 
         fun start(context: Context) {
             val intent = Intent(context, StandbyService::class.java)

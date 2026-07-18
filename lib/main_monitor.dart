@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -70,6 +71,13 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+  );
+  // No offline persistence on the monitor: it is a live device and the
+  // SQLite cache otherwise grows with every heartbeat until old 32-bit
+  // hardware exhausts native memory (observed CursorWindowAllocation
+  // crash after days of uptime).
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: false,
   );
   FirebaseMessaging.onBackgroundMessage(monitorBackgroundHandler);
   runApp(const ProviderScope(child: MonitorApp()));
